@@ -1,0 +1,14 @@
+langgraph>=0.0.15
+langchain>=0.1.0
+langchain-openai>=0.0.2
+pandas>=2.0.0
+streamlit>=1.30.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+python-dotenv>=1.0.0
+kaggle>=1.5.16
+numpy>=1.24.0
+scipy>=1.10.0
+plotly>=5.18.0
+kaleido>=0.2.1  # Required for plotly static image export
+langsmith>=0.0.87 
