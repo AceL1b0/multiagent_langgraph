@@ -6,6 +6,15 @@ This project implements a multi-agent system using LangGraph for data analysis. 
 2. Data Analyst Agent: Performs statistical analysis and insights extraction
 3. Data Visualizer Agent: Creates meaningful visualizations
 
+Notes:
+I am about to implement the next steps:
+- Change and test prompts in LangSmith playground
+- Change model for gpt-4.1
+- Add memory
+- MCP (Anthropic)
+- Enhance visualisation (more charts, meaningul charts)
+- Add reasoning (CoT process)
+
 ## Setup
 
 1. Clone this repository
