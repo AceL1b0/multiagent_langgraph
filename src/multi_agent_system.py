@@ -576,6 +576,7 @@ Please provide Python code for 3-5 visualizations that best illustrate the key i
                 content=f"Error during data visualization: {str(e)}"))
             return state
 
+
     def run_workflow(self, query, file_path):
         """Run the complete workflow"""
         # Initialize state
