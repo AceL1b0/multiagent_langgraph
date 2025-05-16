@@ -2,7 +2,7 @@ from typing import Annotated, List, Dict, Any
 from langgraph.graph import Graph, StateGraph, END
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic  # Changed from OpenAI to Anthropic
 import pandas as pd
 import numpy as np
 import logging
@@ -39,8 +39,13 @@ class AgentState:
 
 
 class MultiAgentSystem:
-    def __init__(self, model_name="gpt-4-turbo-preview"):
-        self.llm = ChatOpenAI(model=model_name, temperature=0.2)
+    def __init__(self, model_name="claude-3-haiku-20240307"):  # Change to Claude model
+        # Initialize Claude LLM instead of OpenAI
+        self.llm = ChatAnthropic(
+            model=model_name,
+            temperature=0.2,
+            anthropic_api_key=os.getenv("ANTHROPIC_API_KEY")  # Use Anthropic API key
+        )
         self.memory_file = os.path.join("memory", "agent_memory.json")
         self.load_memory()
 
@@ -490,9 +495,10 @@ IMPORTANT INSTRUCTIONS FOR CODE GENERATION:
 3. Do not use plt.show() or fig.show() - the code will be executed separately
 4. Check if columns you reference actually exist in the dataframe
 5. Only select numeric columns for scatter plots, bar charts, etc.
-6. Add proper titles, labels, and legends to all visualizations
-7. Make visualizations interactive where appropriate
-8. Generate 3-5 different visualizations that best tell the data story
+6. Use color_discrete_sequence=px.colors.qualitative.Plotly for colorful bar charts
+7. Use color_continuous_scale='RdBu_r' for heatmaps
+8. Make visualizations interactive with proper titles, labels, and legends
+9. Generate 3-5 different visualizations that best tell the data story
 
 Memory Information:
 {memory_context}

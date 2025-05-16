@@ -15,6 +15,32 @@ from src.multi_agent_system import MultiAgentSystem
 # Load environment variables
 load_dotenv()
 
+# Check for Anthropic API key
+api_key = os.getenv("ANTHROPIC_API_KEY")
+if not api_key:
+    st.error(
+        "No Anthropic API key found. Please add an ANTHROPIC_API_KEY to your .env file.")
+    # Add a debug expander to help users
+    with st.expander("Debugging API Key Issues", expanded=False):
+        st.write(
+            "1. Create an Anthropic API key at https://console.anthropic.com/")
+        st.write(
+            "2. Add it to your .env file as: ANTHROPIC_API_KEY=your_key_here")
+        st.write(
+            "3. Make sure the .env file is in the root directory of your project")
+
+        # Check if file exists
+        env_path = os.path.join(os.path.dirname(__file__), ".env")
+        st.write(f".env file exists: {os.path.exists(env_path)}")
+
+        # Show environment variables (safely)
+        st.write("Environment variables:")
+        for key in os.environ:
+            if key.startswith("ANTHROPIC") or key.startswith("LANGCHAIN"):
+                st.write(f"{key}: {'*' * 8}")
+
+    # Still allow app to run for demonstration purposes, but agents won't work
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -289,14 +315,98 @@ def main():
 
                     llm = ChatOpenAI(model="gpt-4-turbo-preview",
                                      temperature=0.3)
-                    response = llm.invoke(f"""You are an assistant for a Multi-Agent Data Analysis System.
 
-                    Context about the analysis:
-                    {context}
+                    # Create detailed context from analysis results
+                    detailed_context = "I can help answer questions about your data analysis.\n\n"
+
+                    if "analysis_results" in st.session_state and st.session_state.analysis_results:
+                        # Extract processed data information
+                        results = st.session_state.analysis_results
+                        if "data" in results and "processed_data" in results[
+                            "data"]:
+                            df = results["data"]["processed_data"]
+                            detailed_context += f"Dataset Information:\n"
+                            detailed_context += f"- Shape: {df.shape[0]} rows, {df.shape[1]} columns\n"
+                            detailed_context += f"- Columns: {', '.join(df.columns.tolist())}\n\n"
+
+                            # Add information about distributions
+                            for col in df.columns:
+                                if df[col].dtype in ['int64', 'float64']:
+                                    detailed_context += f"{col}: Min={df[col].min()}, Max={df[col].max()}, Mean={df[col].mean():.2f}\n"
+                                elif df[col].dtype == 'object':
+                                    value_counts = df[col].value_counts()
+                                    if len(value_counts) < 10:  # Only include if not too many values
+                                        detailed_context += f"{col} values: {', '.join([f'{val}' for val in value_counts.index[:5]])}\n"
+
+                            detailed_context += "\n"
+
+                        # Add specific query capabilities
+                        if "data" in results and "processed_data" in results[
+                            "data"]:
+                            df = results["data"]["processed_data"]
+
+                            if "sleep" in prompt.lower() or "hours" in prompt.lower():
+                                if "Sleep Duration" in df.columns:
+                                    sleep_counts = df[
+                                        "Sleep Duration"].value_counts()
+                                    detailed_context += f"Sleep Duration Distribution:\n"
+                                    for hours, count in sleep_counts.items():
+                                        detailed_context += f"- {hours} hours: {count} students ({count / len(df) * 100:.1f}%)\n"
+                                elif "Work/Study Hours" in df.columns:
+                                    hours_mean = df["Work/Study Hours"].mean()
+                                    hours_under_five = (df[
+                                                            "Work/Study Hours"] < 5).sum()
+                                    detailed_context += f"Work/Study Hours Information:\n"
+                                    detailed_context += f"- Average: {hours_mean:.1f} hours\n"
+                                    detailed_context += f"- Students studying less than 5 hours: {hours_under_five} ({hours_under_five / len(df) * 100:.1f}%)\n"
+
+                            if "city" in prompt.lower() or "location" in prompt.lower():
+                                if "City" in df.columns:
+                                    city_counts = df["City"].value_counts()
+                                    detailed_context += f"City Distribution:\n"
+                                    for city, count in city_counts.head(
+                                            10).items():
+                                        detailed_context += f"- {city}: {count} students ({count / len(df) * 100:.1f}%)\n"
+
+                        # Add analysis content
+                        if "data" in results and "analysis_results" in results[
+                            "data"]:
+                            analysis_text = results["data"]["analysis_results"]
+                            # Extract key insights from analysis
+                            detailed_context += f"\nKey Analysis Findings:\n{analysis_text[:2000]}...\n\n"
+
+                        # Add visualization descriptions
+                        if "data" in results and "plots" in results["data"]:
+                            detailed_context += f"\nVisualizations Created:\n"
+
+                            if "thought_process" in results and "visualizer" in \
+                                    results["thought_process"]:
+                                # Extract visualization descriptions from thought process
+                                viz_thought = results["thought_process"][
+                                    "visualizer"]
+                                # Try to extract visualization descriptions
+                                import re
+                                viz_descriptions = re.findall(
+                                    r'(?:Visualization \d+:|Chart \d+:)(.*?)(?=Visualization \d+:|Chart \d+:|$)',
+                                    viz_thought, re.DOTALL)
+
+                                if viz_descriptions:
+                                    for i, desc in enumerate(viz_descriptions):
+                                        detailed_context += f"- Visualization {i + 1}: {desc.strip()[:200]}\n"
+                                else:
+                                    # Fallback if no descriptions found
+                                    detailed_context += f"- {len(results['data']['plots'])} visualizations showing relationships between variables\n"
+
+                    response = llm.invoke(f"""You are an assistant for a Multi-Agent Data Analysis System with detailed knowledge about the dataset and analysis results.
+
+                    Detailed Context about the analysis:
+                    {detailed_context}
 
                     User question: {prompt}
 
-                    Provide a helpful and informative response about the data analysis.""")
+                    Provide a detailed, informative response drawing DIRECTLY from the information in the context above. 
+                    If there is specific numerical information in the context that answers the user's question, be sure to include those exact statistics. 
+                    If the information isn't available in the context, acknowledge that and suggest what additional analysis might help.""")
 
                     # Add AI response to chat history
                     ai_message = AIMessage(content=response.content)
